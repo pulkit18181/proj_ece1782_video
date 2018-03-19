@@ -1,1 +1,40 @@
-rm -rf *cpu akiyo_*.y;gcc -o0 pcpu.cpp -o pcpu ; ./pcpu; gcc -o0 icpu.cpp -o icpu ; ./icpu;
+# # rm -rf *cpu akiyo_*.y;gcc -o0 pcpu.cpp -o pcpu.o ; ./pcpu; gcc -o0 icpu.cpp -o icpu.o ; ./icpu;
+#   clean
+#   gcc -o0 pcpu.cpp -o pcpu.o  -lstdc++
+#   gcc -o0 pcpu_mt.cpp -o pcpu_mt.o -lm -lpthread -D MT
+#   rm -rf results
+#   echo "pcpu      " | tee -a results; ./pcpu.o       | tee -a results
+#   echo "pcpu_mt 1 " | tee -a results; ./pcpu_mt.o 1  | tee -a results
+#   echo "pcpu_mt 2 " | tee -a results; ./pcpu_mt.o 2  | tee -a results
+# # echo "pcpu_mt 3 " | tee -a results; ./pcpu_mt.o 3  | tee -a results
+#   echo "pcpu_mt 4 " | tee -a results; ./pcpu_mt.o 4  | tee -a results
+# # echo "pcpu_mt 5 " | tee -a results; ./pcpu_mt.o 5  | tee -a results
+# # echo "pcpu_mt 6 " | tee -a results; ./pcpu_mt.o 6  | tee -a results
+# # echo "pcpu_mt 7 " | tee -a results; ./pcpu_mt.o 7  | tee -a results
+#   echo "pcpu_mt 8 " | tee -a results; ./pcpu_mt.o 8  | tee -a results
+# # echo "pcpu_mt 12" | tee -a results; ./pcpu_mt.o 12 | tee -a results
+# # echo "pcpu_mt 16" | tee -a results; ./pcpu_mt.o 16 | tee -a results
+
+
+# # rm -rf *cpu akiyo_*.y;gcc -o0 pcpu.cpp -o pcpu.o ; ./pcpu; gcc -o0 icpu.cpp -o icpu.o ; ./icpu;
+#   clean
+# #  gcc -o0 pcpu.cpp -o pcpu.o  -lstdc++
+#   gcc -o0 pcpu_mt.cpp -o pcpu_mt.o -lm -lpthread -D MT
+#   rm -rf results
+# #  echo "pcpu      " | tee -a results; ./pcpu.o       | tee -a results
+# #   echo "pcpu_mt 1 " | tee -a results; ./pcpu_mt.o 1  | tee -a results
+# #   echo "pcpu_mt 2 " | tee -a results; ./pcpu_mt.o 2  | tee -a results
+# # # echo "pcpu_mt 3 " | tee -a results; ./pcpu_mt.o 3  | tee -a results
+# #   echo "pcpu_mt 4 " | tee -a results; ./pcpu_mt.o 4  | tee -a results
+# # # echo "pcpu_mt 5 " | tee -a results; ./pcpu_mt.o 5  | tee -a results
+# # # echo "pcpu_mt 6 " | tee -a results; ./pcpu_mt.o 6  | tee -a results
+# # # echo "pcpu_mt 7 " | tee -a results; ./pcpu_mt.o 7  | tee -a results
+#   echo "pcpu_mt 8 " | tee -a results; ./pcpu_mt.o 8  | tee -a results
+# # # echo "pcpu_mt 12" | tee -a results; ./pcpu_mt.o 12 | tee -a results
+# # # echo "pcpu_mt 16" | tee -a results; ./pcpu_mt.o 16 | tee -a results
+
+
+clean; # rm -rf results
+gcc -o0 pcpu.cpp    -o pcpu.o    -lm -lpthread    -lstdc++ ; echo "pcpu       " | tee -a results; ./pcpu.o     | tee -a results
+gcc -o0 pcpu_mt.cpp -o pcpu_mt.o -lm -lpthread -D MT -D OP1; echo "pcpu_mt OP1" | tee -a results; ./pcpu_mt.o  | tee -a results
+gcc -o0 pcpu_mt.cpp -o pcpu_mt.o -lm -lpthread -D MT -D OP2; echo "pcpu_mt OP2" | tee -a results; ./pcpu_mt.o  | tee -a results
