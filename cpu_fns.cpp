@@ -19,12 +19,12 @@
 #define M 144
 #define N 176
 #define MN 25344
-#define R 8
-#define B  16	  
-#define MB 9    
-#define NB 11   
-#define BB 256  
-#define lBB 8   
+#define R 16
+#define B  8	  
+#define MB 18    // (M/B)
+#define NB 22    // (N/B)
+#define BB 64    // (B*B)
+#define lBB 6    // log2(BB)
 
 
 // #define M 144

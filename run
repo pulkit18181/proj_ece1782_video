@@ -34,10 +34,17 @@
 # # # echo "pcpu_mt 16" | tee -a results; ./pcpu_mt.o 16 | tee -a results
 
 
-clean; # rm -rf results
-# gcc -o0 pcpu.cpp    -o pcpu.o    -lm -lpthread    -lstdc++ ; echo "pcpu       " | tee -a results; ./pcpu.o     | tee -a results
-# gcc -o0 pcpu_mt.cpp -o pcpu_mt.o -lm -lpthread -D MT -D OP1; echo "pcpu_mt OP1" | tee -a results; ./pcpu_mt.o  | tee -a results
-gcc -o0 pcpu_mt.cpp -o pcpu_mt.o -lm -lpthread -D MT -D OP2; echo "pcpu_mt OP2" | tee -a results; ./pcpu_mt.o  | tee -a results
+# clean; # rm -rf results
+# # gcc -o0 pcpu.cpp    -o pcpu.o    -lm -lpthread    -lstdc++ ; echo "pcpu       " | tee -a results; ./pcpu.o     | tee -a results
+# # gcc -o0 pcpu_mt.cpp -o pcpu_mt.o -lm -lpthread -D MT -D OP1; echo "pcpu_mt OP1" | tee -a results; ./pcpu_mt.o  | tee -a results
+# gcc -o0 pcpu_mt.cpp -o pcpu_mt.o -lm -lpthread -D MT -D OP2; echo "pcpu_mt OP2" | tee -a results; ./pcpu_mt.o  | tee -a results
 
 
-# nvcc -arch sm_52 -ccbin clang-3.8 pgpu.cu -o pgpu.o
+
+rm -rf results
+gcc -o0 pcpu_mt.cpp -o pcpu_mt.o -lm -lpthread -D MT -D OP1; ./pcpu_mt.o
+nvcc pgpu.cu -o pgpu.o; ./pgpu.o
+
+nvcc pgpu.cu -o pgpu.o; ./pgpu.o
+gcc -o0 pcpu_mt.cpp -o pcpu_mt.o -lm -lpthread -D MT -D OP1; ./pcpu_mt.o
+gcc -o0 pcpu_mt.cpp -o pcpu_mt.o -lm -lpthread -D MT -D OP2; ./pcpu_mt.o
