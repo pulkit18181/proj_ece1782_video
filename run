@@ -35,6 +35,9 @@
 
 
 clean; # rm -rf results
-gcc -o0 pcpu.cpp    -o pcpu.o    -lm -lpthread    -lstdc++ ; echo "pcpu       " | tee -a results; ./pcpu.o     | tee -a results
-gcc -o0 pcpu_mt.cpp -o pcpu_mt.o -lm -lpthread -D MT -D OP1; echo "pcpu_mt OP1" | tee -a results; ./pcpu_mt.o  | tee -a results
+# gcc -o0 pcpu.cpp    -o pcpu.o    -lm -lpthread    -lstdc++ ; echo "pcpu       " | tee -a results; ./pcpu.o     | tee -a results
+# gcc -o0 pcpu_mt.cpp -o pcpu_mt.o -lm -lpthread -D MT -D OP1; echo "pcpu_mt OP1" | tee -a results; ./pcpu_mt.o  | tee -a results
 gcc -o0 pcpu_mt.cpp -o pcpu_mt.o -lm -lpthread -D MT -D OP2; echo "pcpu_mt OP2" | tee -a results; ./pcpu_mt.o  | tee -a results
+
+
+# nvcc -arch sm_52 -ccbin clang-3.8 pgpu.cu -o pgpu.o
