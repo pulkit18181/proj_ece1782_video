@@ -6,9 +6,9 @@
 
 int main(){
 
-  FILE    *fid           = fopen("backup/news_qcif.y","rb");
-  FILE    *fid2          = fopen("news_qcif_gpu_ppred.y","wb");
-  FILE    *fid3          = fopen("news_qcif_gpu_res.y","wb");
+  FILE    *fid           = fopen("backup/news_xcif.y","rb");
+  FILE    *fid2          = fopen("news_xcif_gpu_ppred.y","wb");
+  FILE    *fid3          = fopen("news_xcif_gpu_res.y","wb");
 	
   uint8_t *h_Yonly         = (uint8_t *) malloc(M*N*F*sizeof(uint8_t)); if (h_Yonly         == NULL) fprintf(stderr, "Bad malloc on Yonly          \n");
   uint8_t *h_predicted     = (uint8_t *) malloc(M*N*F*sizeof(uint8_t)); if (h_predicted     == NULL) fprintf(stderr, "Bad malloc on predicted      \n");
@@ -22,7 +22,7 @@ int main(){
   uint8_t *d_motion_vector;
   uint8_t *d_Res_orig;
 	
-  printf("single thread with config -> M=%d, N=%d, B=%d R=%d\n", M, N, B, R);
+  printf("gpu with config -> M=%d, N=%d, B=%dx%d R=%d\n", M, N, Br,Bc, R);
 
   //Allocating memory on GPU
   cudaMalloc((void **)&d_Yonly, M*N*F*sizeof(uint8_t));
@@ -46,13 +46,8 @@ int main(){
 	
   dim3 blockDim(BLOCK_SIZEX, BLOCK_SIZEY);
   dim3 gridDim(GRID_SIZE, GRID_SIZE);
-  //dim3 gridDim((N + blockDim.x - 1)/ blockDim.x, (M + blockDim.y - 1) / blockDim.y, 1);
 	
-  //Logic happens here
   for (int kk=0; kk<F; kk++){      
-    // if (ii==1) goto XX;
-    // printf("%u, %u, %u \n",ii,jj, kk);
-    // process_pblock(Yonly, reconstructed, predicted, motion_vector, ii,jj,kk);
     process_pblock<<<gridDim,blockDim>>>(d_Yonly, d_Yonly, d_predicted, d_motion_vector,kk);	  
     cudaDeviceSynchronize();
   }
@@ -69,7 +64,7 @@ int main(){
 
   //Writing files
   write_Y(fid2,h_predicted);
-  write_diff_Y(fid3,h_Yonly,h_predicted);
+  write_Y(fid3,h_Yonly);
 	
   //Free memory on GPU
   cudaFree(d_Yonly);

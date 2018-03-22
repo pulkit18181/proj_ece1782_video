@@ -9,9 +9,9 @@
 
 int main(){
 
-    FILE    *fid           = fopen("backup/foreman_cif.y","rb");
-    FILE    *fid2          = fopen("foreman_cif_ppred.y","wb");
-    FILE    *fid3          = fopen("foreman_cif_res.y","wb");
+    FILE    *fid           = fopen("backup/news_qcif.y","rb");
+    FILE    *fid2          = fopen("news_qcif_ppred.y","wb");
+    FILE    *fid3          = fopen("news_qcif_res.y","wb");
     MYTYPE *Yonly         = (MYTYPE *) malloc(M*N*F*sizeof(MYTYPE)); if (Yonly         == NULL) fprintf(stderr, "Bad malloc on Yonly          \n");
     MYTYPE *predicted     = (MYTYPE *) malloc(M*N*F*sizeof(MYTYPE)); if (predicted     == NULL) fprintf(stderr, "Bad malloc on predicted      \n");
     MYTYPE *reconstructed = (MYTYPE *) malloc(M*N*F*sizeof(MYTYPE)); if (reconstructed == NULL) fprintf(stderr, "Bad malloc on reconstructed  \n");

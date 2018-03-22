@@ -8,26 +8,28 @@
 #include <sys/time.h>
 #include <stdint.h>
 
-// #define M 288
-// #define N 352
-#define M 144
-#define N 176
+#define M 160
+#define N 192
+#define MN 30720
+#define Br 5
+#define Bc 6
+
 #define C 3
 #define F 300
 #define R 16
-#define B 8
-#define MN 25344 // (M*N)
-#define MB 18    // (M/B)
-#define NB 22    // (N/B)
-#define BB 64    // (B*B)
-#define lBB 6    // log2(BB)
+#define MB 32
+#define NB 32
+#define BB 30
 
 #define MYTYPE uint8_t
 
-#define getP(X) ((X)*B)
-#define ptr(f,r,c) ((f)*MN +getP(r)*N +getP(c))
+#define getPr(K) ((K)*Br)
+#define getPc(K) ((K)*Bc)
+
+#define ptr(f,r,c) ((f)*MN +getPr(r)*N +getPc(c))
 #define ptrp(f,r,c) ((f)*MN +(r)*N +(c))
-#define getB(X) (floor(X/B))
+#define getBr(X) (floor(X/Br))
+#define getBc(X) (floor(X/Bc))
 #define mymax(X,Y) ((X)>(Y)?(X):(Y))
 #define mymin(X,Y) ((X)<(Y)?(X):(Y))
 #define myabs(X)   ((X)>0?(X):-1*(X))
@@ -108,16 +110,14 @@ void write_diff_Y(FILE *fid, uint8_t *Y1, uint8_t *Y2){
   }
 }
 
-
 __device__ int get_sad(uint8_t *Y1, int br1,int bc1,int bf1, uint8_t *Y2, int br2,int bc2,int bf2, bool print=0){
   int val = 0;
-  int size2 = B;
-  register int idx1 = bf1*MN +getP(br1)*N +getP(bc1);
-  register int idx2 = bf2*MN +getP(br2)*N +getP(bc2);
-  for (register int ii=0; ii<B; ii++){
-    for (register int jj=0; jj<B; jj++){
+  register int idx1 = bf1*MN +getPr(br1)*N +getPc(bc1);
+  register int idx2 = bf2*MN +getPr(br2)*N +getPc(bc2);
+  for (register int ii=0; ii<Br; ii++){
+    for (register int jj=0; jj<Bc; jj++){
       register int idx1f = idx1 + ii*N + jj;
-      register int idx2f = idx2 + ii*size2 + jj;
+      register int idx2f = idx2 + ii*Bc + jj;
       if (print) printf("(%d,%d) = %3d %3d \n",idx1f,idx2f,Y1[idx1f], Y2[idx2f] );
       val += abs(Y1[idx1f] - Y2[idx2f]);
     }
@@ -126,13 +126,14 @@ __device__ int get_sad(uint8_t *Y1, int br1,int bc1,int bf1, uint8_t *Y2, int br
   // return val>>(lBB);
 }
 
+/// -----------------done above
 __device__ int get_sad2(MYTYPE *Y1, int br1,int bc1,int bf1, MYTYPE *Y2, int pr2,int pc2,int pf2, bool print=0){
   register int val = 0;
   register int idx1 = ptr (bf1,br1,bc1);
   register int idx2 = ptrp(pf2,pr2,pc2);
   // printf("%d %d %d-> %d----- %d,%d,%d-> %d\n",bf1,br1,bc1, idx1,pf2,pr2,pc2, idx2);
-  for (register int ii=0; ii<B; ii++){
-    for (register int jj=0; jj<B; jj++){
+  for (register int ii=0; ii<Br; ii++){
+    for (register int jj=0; jj<Bc; jj++){
       int temp = (Y1[idx1] - Y1[idx2]);
       val = val +  myabs(temp);
 #ifdef enable_prints
@@ -140,107 +141,20 @@ __device__ int get_sad2(MYTYPE *Y1, int br1,int bc1,int bf1, MYTYPE *Y2, int pr2
 #endif
       idx1++; idx2++;
     }
-    idx1 += (N-B);
-    idx2 += (N-B);
+    idx1 += (N-Bc);
+    idx2 += (N-Bc);
   }
   return val;
   // return val>>(lBB);
 }
 
-__global__ void process_iblock(uint8_t *Yonly, uint8_t *reconstructed, uint8_t *predicted_frame, uint8_t *motion_vector, int bf){
-  uint8_t      local_block      [B][B];
-  register int local_sad;
-  uint8_t      lowest_sad_block [B][B];
-  register int lowest_mode;
-  register int lowest_sad; 
-	
-  int br = blockIdx.y * blockDim.y + threadIdx.y;
-  int bc = blockIdx.x * blockDim.x + threadIdx.x;
-
-  register int curr = bf*MN +getP(br)*N +getP(bc);
-  register int left = bf*MN +getP(br)*N +getP(bc-1);
-  register int top  = bf*MN +getP(br-1)*N +getP(bc); //FIXME
-
-  lowest_sad = 147483647;
-  lowest_mode = 0;
-    
-  // ------------ mode 0 (horizontal on the left) ------------ 
-  if (bc==0) {
-    for (int jj=0; jj<B; jj++){
-      for (int ii=0; ii<B; ii++){
-	local_block[ii][jj] = 127;
-      }
-    }
-  }
-  else {
-    for (int ii=0; ii<B; ii++){
-      uint8_t val = reconstructed[left+ ii*N - 1]; // FIXME
-      for (int jj=0; jj<B; jj++){
-	local_block[ii][jj] = val;
-      }
-    }
-  }
-  local_sad = get_sad(Yonly,br,bc,bf,(unsigned char*)local_block,0,0,0);
-  // printf("mode=%u, sad=%d, loc_sad=%d\n",0, lowest_sad, local_sad);
-  if (local_sad < lowest_sad){
-    lowest_mode = 0;
-    lowest_sad = local_sad;
-    memcpy(&lowest_sad_block, &local_block, sizeof(lowest_sad_block));
-  }
-
-    
-  // ------------ mode 1 (vertical or on the top) ------------
-  if (br==0) {
-    for (int jj=0; jj<B; jj++){
-      for (int ii=0; ii<B; ii++){
-	local_block[ii][jj] = 127;
-      }
-    }
-  }
-  else {
-    for (int jj=0; jj<B; jj++){ 
-      uint8_t val = reconstructed[left - N + jj]; // FIXME
-      for (int ii=0; ii<B; ii++){
-	local_block[ii][jj] = val;
-      }
-    }
-  }
-  local_sad = get_sad(Yonly,br,bc,bf,(unsigned char*)local_block,0,0,0);
-  // printf("mode=%u, sad=%d, loc_sad=%d\n",1, lowest_sad, local_sad);
-  if (local_sad < lowest_sad){
-    lowest_mode = 1;
-    lowest_sad = local_sad;
-    memcpy(&lowest_sad_block, &local_block, sizeof(lowest_sad_block));
-  }
-
-
-    
-  // ------------ returning the predicted frame ------------ 
-  for (int ii=0; ii<B; ii++){
-    for (int jj=0; jj<B; jj++){
-      int idx = curr + ii*N +jj;
-      predicted_frame[idx] = lowest_sad_block[ii][jj];
-    }
-  }
-	
-  lowest_mode = lowest_mode; // assign it on the motion vector
-
-}
-
-
 __global__ void process_pblock(uint8_t *Yonly, uint8_t *reconstructed, uint8_t *predicted_frame, uint8_t *motion_vector, int bf){
-  uint8_t      local_block      [B][B];
-  uint8_t      lowest_sad_block [B][B];
-  register int lowest_sad; 
-  register int lowest_x;
-  register int lowest_y;
-  unsigned int local_sad [2*R+1][2*R+1];
 
   int br = blockIdx.y * blockDim.y + threadIdx.y;
   int bc = blockIdx.x * blockDim.x + threadIdx.x;
 	
-  register int pr         = (unsigned int)getP(br);
-  register int pc         = (unsigned int)getP(bc);
+  register int pr         = (unsigned int)getPr(br);
+  register int pc         = (unsigned int)getPc(bc);
   register int curr       = (unsigned int)(bf*MN +(pr)*N +(pc));
 
   // printf("block -> br,bc = %u,%u \n",br, bc);
@@ -253,11 +167,11 @@ __global__ void process_pblock(uint8_t *Yonly, uint8_t *reconstructed, uint8_t *
 
     // printf("processing first frame");
 
-    for (int ii=0; ii<B; ii++){
-      for (int jj=0; jj<B; jj++){
+    for (int ii=0; ii<Br; ii++){
+      for (int jj=0; jj<Bc; jj++){
 	predicted_frame[curr++] = 127;
       }
-      curr += (N - B);
+      curr += (N - Bc);
     }
   }
 
@@ -268,12 +182,13 @@ __global__ void process_pblock(uint8_t *Yonly, uint8_t *reconstructed, uint8_t *
     register int lowest_c;	
     register int startr, endr;
     register int startc, endc;
+    unsigned int local_sad [2*R+1][2*R+1];
     startr = mymax(0,(pr)-R);
     startc = mymax(0,(pc)-R);
     endr = mymin(M-1,(pr)+R);
     endc = mymin(N-1,(pc)+R);
     
-    // printf("processing window_block br,bc = (%u,%u) ..... start end=%u,%u, %u,%u\n",pr, pc, startr, endr,startc,endc);
+    // printf("processing window_block pr,pc = (%u,%u) ..... start end=%u,%u, %u,%u\n",pr, pc, startr, endr,startc,endc);
 
 
     for (register int rr=startr; rr<=endr; rr++){
@@ -301,15 +216,16 @@ __global__ void process_pblock(uint8_t *Yonly, uint8_t *reconstructed, uint8_t *
     // ------------ returning the predicted frame ------------
     {
       register int idx2 = ptrp(bf-1,lowest_r,lowest_c);
-      for (register int ii=0; ii<B; ii++){
-	for (register int jj=0; jj<B; jj++){
+      // printf("selected %d,%d,%d for (%d,%d),%d with best=%d, curr=%d, idx2=%d ..... start end=%u,%u, %u,%u\n", lowest_r,lowest_c,bf-1, pr,pc,bf,lowest_sad, curr, idx2, startr, endr,startc,endc);
+      for (register int ii=0; ii<Br; ii++){
+	for (register int jj=0; jj<Bc; jj++){
 
-	  //printf("preping %d,%d\n", curr,idx2);
+	  // printf("preping %d,%d\n", curr,idx2);
 
 	  predicted_frame[curr++] = reconstructed[idx2++];
 	}
-	curr += (N-B);
-	idx2 += (N-B);
+	curr += (N-Bc);
+	idx2 += (N-Bc);
       }
     }
   }
