@@ -42,6 +42,7 @@
 
 
 nvcc pgpu.cu -o pgpu.o; ./pgpu.o
+nvcc pgpu.cu -D UNROLL -o pgpu.o; ./pgpu.o
 gcc -o0 pcpu.cpp    -o pcpu.o    -lm -lpthread    -lstdc++; ./pcpu.o
 gcc -o0 pcpu_mt.cpp -o pcpu_mt1.o -lm -lpthread -D MT -D OP1; ./pcpu_mt1.o
 gcc -o0 pcpu_mt.cpp -o pcpu_mt2.o -lm -lpthread -D MT -D OP2; ./pcpu_mt2.o
