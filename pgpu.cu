@@ -64,7 +64,7 @@ int main(){
 
   //Writing files
   write_Y(fid2,h_predicted);
-  write_Y(fid3,h_Yonly);
+  write_diff_Y(fid3,h_Yonly,h_predicted);
 	
   //Free memory on GPU
   cudaFree(d_Yonly);
