@@ -19,7 +19,7 @@
 #define R 16
 #define MB 32
 #define NB 32
-#define BB 30
+#define INTMAX 147483647 
 
 #define MYTYPE uint8_t
 
@@ -126,26 +126,23 @@ __device__ int get_sad(uint8_t *Y1, int br1,int bc1,int bf1, uint8_t *Y2, int br
   // return val>>(lBB);
 }
 
-/// -----------------done above
 __device__ int get_sad2(MYTYPE *Y1, int br1,int bc1,int bf1, MYTYPE *Y2, int pr2,int pc2,int pf2, bool print=0){
   register int val = 0;
   register int idx1 = ptr (bf1,br1,bc1);
   register int idx2 = ptrp(pf2,pr2,pc2);
-  // printf("%d %d %d-> %d----- %d,%d,%d-> %d\n",bf1,br1,bc1, idx1,pf2,pr2,pc2, idx2);
-  for (register int ii=0; ii<Br; ii++){
-    for (register int jj=0; jj<Bc; jj++){
-      int temp = (Y1[idx1] - Y1[idx2]);
-      val = val +  myabs(temp);
-#ifdef enable_prints
-      // printf("%d   -- %d %d----- %d,%d\n",val,temp, myabs(temp), idx1, idx2);
+#ifdef UNROLL
+#pragma unroll
 #endif
-      idx1++; idx2++;
+  for (register int ii=0; ii<Br; ii++, idx1+=(N-Bc),idx2+=(N-Bc)){
+#ifdef UNROLL
+#pragma unroll
+#endif
+    for (register int jj=0; jj<Bc; jj++,idx1++,idx2++){
+      val = val +  myabs((Y1[idx1] - Y1[idx2]));
     }
-    idx1 += (N-Bc);
-    idx2 += (N-Bc);
   }
-  return val;
-  // return val>>(lBB);
+  if (pr2<M && pr2>=0 && pc2<N && pc2>=0)  return val;
+  else return INTMAX;
 }
 
 __global__ void process_pblock(uint8_t *Yonly, uint8_t *reconstructed, uint8_t *predicted_frame, uint8_t *motion_vector, int bf){
@@ -167,46 +164,55 @@ __global__ void process_pblock(uint8_t *Yonly, uint8_t *reconstructed, uint8_t *
 
     // printf("processing first frame");
 
-    for (int ii=0; ii<Br; ii++){
-      for (int jj=0; jj<Bc; jj++){
-	predicted_frame[curr++] = 127;
+#ifdef UNROLL
+#pragma unroll
+#endif
+    for (int ii=0; ii<Br; ii++, curr+=(N-Bc)){
+#ifdef UNROLL
+#pragma unroll
+#endif
+      for (int jj=0; jj<Bc; jj++, curr++){
+	predicted_frame[curr] = 127;
       }
-      curr += (N - Bc);
     }
   }
 
   // ------------ non-first frame ------------
   else {
-    register unsigned int lowest_sad = 147483647;
+    register unsigned int lowest_sad = INTMAX;
     register int lowest_r;	
     register int lowest_c;	
-    register int startr, endr;
-    register int startc, endc;
     unsigned int local_sad [2*R+1][2*R+1];
-    startr = mymax(0,(pr)-R);
-    startc = mymax(0,(pc)-R);
-    endr = mymin(M-1,(pr)+R);
-    endc = mymin(N-1,(pc)+R);
+
     
     // printf("processing window_block pr,pc = (%u,%u) ..... start end=%u,%u, %u,%u\n",pr, pc, startr, endr,startc,endc);
 
 
-    for (register int rr=startr; rr<=endr; rr++){
-      for (register int cc=startc; cc<=endc; cc++){
-	local_sad[rr-startr][cc-startc] = get_sad2(Yonly,br,bc,bf,reconstructed,rr,cc,bf-1);
-	// printf("(%d,%d) computing sad for %d, %d -> %d start end=%u,%u, %u,%u\n", pr,pc,rr, cc,local_sad[rr-startr][cc-startc],startr, endr,startc,endc);
+#define act_rr (pr+rr-R)
+#define act_cc (pc+cc-R)
+#ifdef UNROLL
+#pragma unroll
+#endif
+    for (register int rr=0; rr<=2*R; rr++){
+#ifdef UNROLL
+#pragma unroll
+#endif
+      for (register int cc=0; cc<=2*R; cc++){
+    	local_sad[rr][cc] = get_sad2(Yonly,br,bc,bf,reconstructed,act_rr,act_cc,bf-1);
       }
     }
-
-    // printf("computed window_block br,bc = (%u,%u) ..... start end=%u,%u, %u,%u\n",pr, pc, startr, endr,startc,endc);
-
-    for (register int rr=startr; rr<=endr; rr++){
-      for (register int cc=startc; cc<=endc; cc++){
-	// printf("checking %d,%d,%d for (%d,%d),%d with local=%d\n", rr,cc,bf-1, pr,pc,bf,local_sad[rr-startr][cc-startc]);
-	if (local_sad[rr-startr][cc-startc] < lowest_sad){ 
-	  lowest_r = rr;
-	  lowest_c = cc;
-	  lowest_sad = local_sad[rr-startr][cc-startc];
+#ifdef UNROLL
+#pragma unroll
+#endif
+    for (register int rr=0; rr<=2*R; rr++){
+#ifdef UNROLL
+#pragma unroll
+#endif
+      for (register int cc=0; cc<=2*R; cc++){
+	if (local_sad[rr][cc] < lowest_sad){
+	  lowest_r = act_rr;
+	  lowest_c = act_cc;
+	  lowest_sad = local_sad[rr][cc];
 	}
       }
     }
@@ -217,15 +223,16 @@ __global__ void process_pblock(uint8_t *Yonly, uint8_t *reconstructed, uint8_t *
     {
       register int idx2 = ptrp(bf-1,lowest_r,lowest_c);
       // printf("selected %d,%d,%d for (%d,%d),%d with best=%d, curr=%d, idx2=%d ..... start end=%u,%u, %u,%u\n", lowest_r,lowest_c,bf-1, pr,pc,bf,lowest_sad, curr, idx2, startr, endr,startc,endc);
-      for (register int ii=0; ii<Br; ii++){
-	for (register int jj=0; jj<Bc; jj++){
-
-	  // printf("preping %d,%d\n", curr,idx2);
-
-	  predicted_frame[curr++] = reconstructed[idx2++];
+#ifdef UNROLL
+#pragma unroll
+#endif
+      for (register int ii=0; ii<Br; ii++, curr+=(N-Bc), idx2+=(N-Bc)){
+#ifdef UNROLL
+#pragma unroll
+#endif
+	for (register int jj=0; jj<Bc; jj++, curr++, idx2++){
+	  predicted_frame[curr] = reconstructed[idx2];
 	}
-	curr += (N-Bc);
-	idx2 += (N-Bc);
       }
     }
   }
