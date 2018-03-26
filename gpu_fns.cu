@@ -110,6 +110,19 @@ void write_diff_Y(FILE *fid, uint8_t *Y1, uint8_t *Y2){
   }
 }
 
+
+__global__ void deviceInit(uint8_t *_A, uint8_t *_B, uint8_t *_C, uint8_t *_D, uint8_t *_E){
+  for (register int kk=0; kk<M*N*F; kk++) {
+    _A[kk] = 0;
+    _B[kk] = 0;
+    _C[kk] = 0;
+    _D[kk] = 0;
+    _E[kk] = 0;
+  }
+  return;
+}
+
+
 __device__ int get_sad(uint8_t *Y1, int br1,int bc1,int bf1, uint8_t *Y2, int br2,int bc2,int bf2, bool print=0){
   int val = 0;
   register int idx1 = bf1*MN +getPr(br1)*N +getPc(bc1);
@@ -184,19 +197,15 @@ __global__ void process_pblock(uint8_t *Yonly, uint8_t *reconstructed, uint8_t *
     register int lowest_c;	
     unsigned int local_sad [2*R+1][2*R+1];
 
-    
-    // printf("processing window_block pr,pc = (%u,%u) ..... start end=%u,%u, %u,%u\n",pr, pc, startr, endr,startc,endc);
-
-
 #define act_rr (pr+rr-R)
 #define act_cc (pc+cc-R)
-#ifdef UNROLL
-#pragma unroll
-#endif
+// #ifdef UNROLL
+// #pragma unroll
+// #endif
     for (register int rr=0; rr<=2*R; rr++){
-#ifdef UNROLL
-#pragma unroll
-#endif
+// #ifdef UNROLL
+// #pragma unroll
+// #endif
       for (register int cc=0; cc<=2*R; cc++){
     	local_sad[rr][cc] = get_sad2(Yonly,br,bc,bf,reconstructed,act_rr,act_cc,bf-1);
       }
@@ -217,7 +226,7 @@ __global__ void process_pblock(uint8_t *Yonly, uint8_t *reconstructed, uint8_t *
       }
     }
 
-    // printf("selected %d,%d,%d for (%d,%d),%d with best=%d\n", lowest_r,lowest_c,bf-1, pr,pc,bf,lowest_sad);
+    // printf("proc (%u,%u)%d ..... selected %d,%d,%d with best=%d\n", pr, pc, bf, lowest_r,lowest_c,bf-1, lowest_sad);
 
     // ------------ returning the predicted frame ------------
     {

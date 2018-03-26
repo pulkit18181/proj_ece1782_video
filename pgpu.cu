@@ -35,32 +35,29 @@ int main(){
   get_Y(fid,h_Yonly,1);
   fclose(fid);
 	
+
+  dim3 blockDim1(1,1);
+  dim3 gridDim1(1,1);
+  deviceInit<<<gridDim1,blockDim1>>>(d_Yonly, d_predicted, d_reconstructed, d_motion_vector, d_Res_orig);	  
+  cudaDeviceSynchronize();
+
   start_timer();
 	
   //Transferring data from the CPU to the GPU
   cudaMemcpy(d_Yonly, h_Yonly, (M*N*F*sizeof(uint8_t)), cudaMemcpyHostToDevice);
 	
-  end_timer("Mem Copy: CPU->GPU");
-	
-  start_timer();
-	
   dim3 blockDim(BLOCK_SIZEX, BLOCK_SIZEY);
   dim3 gridDim(GRID_SIZE, GRID_SIZE);
-	
   for (int kk=0; kk<F; kk++){      
     process_pblock<<<gridDim,blockDim>>>(d_Yonly, d_Yonly, d_predicted, d_motion_vector,kk);	  
     cudaDeviceSynchronize();
   }
-	
-  end_timer("Entire Logic");
-	
-  start_timer();
-	
+
   //Transferring data from the GPU to the CPU
   cudaMemcpy(h_predicted, d_predicted, (M*N*F*sizeof(uint8_t)), cudaMemcpyDeviceToHost);
   cudaDeviceSynchronize();
 
-  end_timer("Mem Copy: GPU->CPU");
+  end_timer("GPU - ");
 
   //Writing files
   write_Y(fid2,h_predicted);
