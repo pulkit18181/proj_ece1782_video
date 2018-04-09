@@ -202,12 +202,17 @@ __global__ void process_pblock(uint8_t *Yonly, uint8_t *reconstructed, uint8_t *
 // #ifdef UNROLL
 // #pragma unroll
 // #endif
-    for (register int rr=0; rr<=2*R; rr++){
+    for (register int rr=0; rr<=2*R; rr+=5){
 // #ifdef UNROLL
 // #pragma unroll
 // #endif
       for (register int cc=0; cc<=2*R; cc++){
-    	local_sad[rr][cc] = get_sad2(Yonly,br,bc,bf,reconstructed,act_rr,act_cc,bf-1);
+				local_sad[rr][cc] = get_sad2(Yonly,br,bc,bf,reconstructed,act_rr,act_cc,bf-1);
+				local_sad[rr+1][cc] = get_sad2(Yonly,br,bc,bf,reconstructed,act_rr+1,act_cc,bf-1);
+				local_sad[rr+2][cc] = get_sad2(Yonly,br,bc,bf,reconstructed,act_rr+2,act_cc,bf-1);
+				local_sad[rr+3][cc] = get_sad2(Yonly,br,bc,bf,reconstructed,act_rr+3,act_cc,bf-1);
+				local_sad[rr+4][cc] = get_sad2(Yonly,br,bc,bf,reconstructed,act_rr+4,act_cc,bf-1);
+			
       }
     }
 #ifdef UNROLL
